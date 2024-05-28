@@ -1,0 +1,74 @@
+common:
+  task: classification
+  distributed_training:
+    data_parallel: true
+  logger:
+    name: resnet_cifar10
+    frequency: 100
+dataset:
+  name: cifar10
+  root_train: cifar10/train
+  root_test: cifar10/test
+  root_expanduser: true
+  batch_size_train: 128
+  batch_size_test: 100
+  num_workers: 4
+  image_transforms:
+    random_crop:
+      enable: true
+      size: 32
+      padding: 4
+    random_horizontal_flip:
+      enable: true
+    to_tensor:
+      enable: true
+    normalize:
+      enable: true
+      mean: [0.4914, 0.4822, 0.4465]
+      std: [0.247, 0.243, 0.261]
+optim:
+  name: sgd
+  weight_decay: 5.e-4
+  sgd:
+    momentum: 0.9
+  lr_scheduler:
+    name: multistep
+    multistep:
+      per_epoch: true
+      gamma: 0.97
+    max_epochs: 0 # This will get set to ckpt_num
+    max_lr: 0.1 # This will get scaled according to max_lr * (1 - .9/200*ckpt_num)
+loss:
+  category: classification
+  classification:
+    name: cross_entropy
+model:
+  seed: 0
+  classification:
+    name: cifar_resnet
+    num_classes: 10
+    cifar_resnet:
+      depth: 18
+  sparsity:
+    unstructured:
+      enable: true
+      prune_bias: false
+      target_sparsity: 0.8
+      output_sparsity_scale: 0 # The final linear layer's target sparsity will be scaled by this value. 0 means don't prune last layer.
+  load_from_state_dict:
+    path: /media/data/model/ # The ckpt<ckpt_num>.pth file should be in this dir.
+    resume_training: false
+    from_ckpt:
+      ckpt_num: -1 # This should get set when running the terminal command, e.g., --model.load_from_state_dict.ckpt_num
+      original_training_epochs: 200 # The number of epochs that the original model was trained for.
+metrics:
+  test: ["top1", "top5"]
+  fisher:
+    metrics: ["trace"]
+    method: monte_carlo
+saver:
+  dir: /media/data/ # ckpt_num will be appended to this dir as <dir>/ckpt_num
+  overwrite: true
+  save_every_k_epochs: -1
+  best_model_only: true
+  top_metric: "top1"

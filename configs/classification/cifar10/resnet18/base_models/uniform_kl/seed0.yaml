@@ -1,0 +1,68 @@
+# python main_post_train_metrics.py --common.config configs/classification/cifar10/resnet18/base_models/uniform_kl/seed0.yaml
+common:
+  task: classification
+  distributed_training:
+    data_parallel: true
+  logger:
+    name: resnet_cifar10
+    frequency: 100
+dataset:
+  name: cifar10
+  root_train: cifar10/train
+  root_test: cifar10/test
+  root_expanduser: true
+  batch_size_train: 128
+  batch_size_test: 100
+  num_workers: 4
+  image_transforms:
+    random_crop:
+      enable: true
+      size: 32
+      padding: 4
+    random_horizontal_flip:
+      enable: true
+    to_tensor:
+      enable: true
+    normalize:
+      enable: true
+      mean: [0.4914, 0.4822, 0.4465]
+      std: [0.247, 0.243, 0.261]
+optim:
+  name: sgd
+  weight_decay: 5.e-4
+  sgd:
+    momentum: 0.9
+  lr_scheduler:
+    name: multistep
+    multistep:
+      per_epoch: true
+      gamma: 0.97
+    max_epochs: 200
+    max_lr: 0.1
+loss:
+  category: classification
+  classification:
+    name: cross_entropy
+model:
+  seed: 0
+  classification:
+    name: cifar_resnet
+    num_classes: 10
+    cifar_resnet:
+      depth: 18
+  sparsity:
+    unstructured:
+      enable: true
+      prune_bias: false
+      target_sparsity: 0
+      output_sparsity_scale: 0 # The final linear layer's target sparsity will be scaled by this value. 0 means don't prune last layer.
+metrics:
+  test: ["top1", "top5"]
+  post_train:
+    metric_name: uniform_kl
+    use_training_augs: true
+    eval_mode: true
+    recalibrate_bn: false
+    model_ckpts_dir: /media/data/model
+saver:
+  dir: /media/data/uniform_kl2
